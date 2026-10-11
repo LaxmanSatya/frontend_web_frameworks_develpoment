@@ -1,1 +1,1 @@
-# Develop a Weather Information Dashboard using modern JS features. Featch weather data from an API using Fetch API 
+# Develop a Weather Information Dashboard using modern JS features. Fetch weather data from an API using Fetch API 
