@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Dashboard</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #2193b0, #6dd5ed);
+            text-align: center;
+            padding: 30px;
+            color: white;
+        }
+
+        .dashboard {
+            max-width: 400px;
+            margin: auto;
+            padding: 25px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 15px;
+        }
+
+        input, button {
+            padding: 12px;
+            margin: 5px;
+            border: none;
+            border-radius: 6px;
+        }
+
+        button {
+            background: #ffcc00;
+            cursor: pointer;
+        }
+
+        .weather-box {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+        }
+
+        .temperature {
+            font-size: 40px;
+            font-weight: bold;
+        }
+
+        #message {
+            min-height: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="dashboard">
+        <h1>Weather Dashboard</h1>
+
+        <input type="text" id="city"
+               placeholder="Enter city name">
+
+        <button id="searchBtn">Search</button>
+
+        <p id="message">Enter a city to check its weather.</p>
+
+        <div class="weather-box" id="weather">
+            <h2 id="cityName">City</h2>
+            <p class="temperature" id="temperature">-- °C</p>
+            <p id="condition">Condition: --</p>
+            <p id="humidity">Humidity: --</p>
+            <p id="wind">Wind Speed: --</p>
+        </div>
+    </div>
+
+    <script>
+        const cityInput = document.getElementById("city");
+        const searchBtn = document.getElementById("searchBtn");
+        const message = document.getElementById("message");
+
+        // Convert weather codes into descriptions
+        const getCondition = (code) => {
+            if (code === 0) return "Clear sky";
+            if ([1, 2, 3].includes(code)) return "Partly cloudy";
+            if ([45, 48].includes(code)) return "Foggy";
+            if ([51, 53, 55, 61, 63, 65].includes(code))
+                return "Rain";
+            if ([71, 73, 75].includes(code)) return "Snow";
+            if ([95, 96, 99].includes(code)) return "Thunderstorm";
+            return "Mixed or changing weather";
+        };
+
+        // Fetch weather data for a city
+        async function getWeather() {
+            const city = cityInput.value.trim();
+
+            if (!city) {
+                message.textContent = "Please enter a city name.";
+                return;
+            }
+
+            message.textContent = "Loading weather...";
+            searchBtn.disabled = false; /// [Expo1] : if i change true -> false there is no change in output when my observation.
+
+            try {
+                /// ----------------------------------- Important real world steps ------------------------------------- `this 100% genun data.and used wheather api` 
+                
+                // Step 1: Find city coordinates [HIGH*] [IMP1]
+                const geoURL =
+                    `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`;
+
+                const geoResponse = await fetch(geoURL);
+
+                if (!geoResponse.ok) {
+                    throw new Error("Unable to find the city.");
+                }
+
+                const geoData = await geoResponse.json(); // [IMP2] : in real world where .json useful in Internet Web
+                const place = geoData.results?.[0]; // [SP1]
+
+                if (!place) {
+                    throw new Error("City not found. Try another name.");
+                }
+
+                // Step 2: Fetch weather using coordinates
+                const weatherURL =
+                    `https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code`;
+
+                const weatherResponse = await fetch(weatherURL);
+
+                /// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+                if (!weatherResponse.ok) {
+                    throw new Error("Unable to fetch weather data.");
+                }
+
+                const data = await weatherResponse.json();
+                const current = data.current;
+
+                // Step 3: Display the results
+                document.getElementById("cityName").textContent =
+                    `${place.name}, ${place.country}`;
+
+                document.getElementById("temperature").textContent =
+                    `${current.temperature_2m} °C`;
+
+                document.getElementById("condition").textContent =
+                    "Condition: " + getCondition(current.weather_code);
+
+                document.getElementById("humidity").textContent =
+                    `Humidity: ${current.relative_humidity_2m}%`;
+
+                document.getElementById("wind").textContent =
+                    `Wind Speed: ${current.wind_speed_10m} km/h`; /// m indicates may be time in minutes because, here, km/h so,m is not distance. 
+
+                message.textContent = "Weather updated successfully!";
+
+            } catch (error) {
+                message.textContent = error.message;
+            } finally {
+                searchBtn.disabled = false; /// [IMP3] ::: here searchBtn.diabled false.
+            }
+        }
+
+        searchBtn.addEventListener("click", getWeather);
+
+        // Search when the user presses Enter
+        cityInput.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") getWeather();
+        });
+    </script>
+
+</body>
+</html>
